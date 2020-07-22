@@ -32,55 +32,62 @@ const (
 )
 
 type App struct {
-	cfg  config
-	mode int
-
+	cfg      config
 	ui       *tview.Application
-	root     *tview.Flex
 	title    *tview.TextView
 	status   *tview.TextView
 	datetime *tview.TextView
+	footer   *tview.TextView
 	content  *tview.TextView
+	display  *tview.Flex
 }
 
 type config struct {
-	ErrExit  bool    `short:"e" long:"errexit"  description:"exit if command has a non-zero exit"`
-	Interval float64 `short:"n" long:"interval" description:"time in seconds to wait between updates" default:"2.0"`
-	NoTitle  bool    `short:"t" long:"no-title" description:"turn off header"`
-	Exec     bool    `short:"x" long:"exec"     description:"pass command to exec instead of \"sh -c\""`
-	Style    string  `short:"s" long:"style"    description:"interpret color and style sequences"`
-	Version  func()  `short:"v" long:"version"  description:"output version information and exit"`
+	ErrExit       bool    `short:"e" long:"errexit"  description:"exit if command has a non-zero exit"`
+	Interval      float64 `short:"n" long:"interval" description:"time in seconds to wait between updates" default:"2.0"`
+	NoTitle       bool    `short:"t" long:"no-title" description:"turn off header"`
+	Exec          bool    `short:"x" long:"exec"     description:"pass command to exec instead of \"sh -c\""`
+	ColorStyle    string  `short:"s" long:"style"    description:"interpret color and style sequences"`
+	Version       func()  `short:"v" long:"version"  description:"output version information and exit"`
+	HighlightMode int     `no-flag:"true"`
+	SuspendMode   bool    `no-flag:"true"`
 }
 
 func NewApp(cfg config) *App {
 	a := &App{
 		cfg:      cfg,
-		mode:     HighlightModeOff,
 		ui:       tview.NewApplication(),
-		root:     tview.NewFlex(),
 		title:    tview.NewTextView(),
-		status:   tview.NewTextView(),
 		datetime: tview.NewTextView(),
+		status:   tview.NewTextView(),
+		footer:   tview.NewTextView(),
 		content:  tview.NewTextView(),
+		display:  tview.NewFlex(),
 	}
 
-	header := tview.NewFlex()
-	header.AddItem(a.title, 0, 1, false)
-	header.AddItem(a.datetime, 25, 0, false)
-
-	a.root.SetDirection(tview.FlexRow)
+	a.display.SetDirection(tview.FlexRow)
 	if !a.cfg.NoTitle {
-		a.root.AddItem(header, 1, 0, false)
-		a.root.AddItem(a.status, 1, 0, false)
+		header := tview.NewFlex()
+		header.AddItem(a.title, 0, 1, false)
+		header.AddItem(a.datetime, 35, 0, false)
+
+		a.display.AddItem(header, 1, 0, false)
+		a.display.AddItem(a.status, 1, 0, false)
 	}
-	a.root.AddItem(a.content, 0, 1, true)
+	a.display.AddItem(a.content, 0, 1, true)
+
+	a.datetime.SetTextAlign(tview.AlignRight)
+	a.status.SetTextAlign(tview.AlignRight)
+	a.status.SetDynamicColors(true)
 
 	a.content.SetDynamicColors(true)
 	a.content.SetChangedFunc(func() { a.ui.Draw() })
 	a.content.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'd':
-			a.setHighlightMode((a.mode + 1) % numHighlightMode)
+			a.setHighlightMode((a.cfg.HighlightMode + 1) % numHighlightMode)
+		case 'p':
+			a.setSuspendMode(!a.cfg.SuspendMode)
 		case 'q':
 			a.ui.Stop()
 			os.Exit(0)
@@ -88,30 +95,9 @@ func NewApp(cfg config) *App {
 		return event
 	})
 
-	a.datetime.SetDynamicColors(true)
-	a.datetime.SetTextAlign(tview.AlignRight)
-
-	a.status.SetDynamicColors(true)
-	a.status.SetTextAlign(tview.AlignRight)
-
-	a.setHighlightMode(a.mode)
-	a.ui.SetRoot(a.root, true)
+	a.setHighlightMode(a.cfg.HighlightMode)
+	a.ui.SetRoot(a.display, true)
 	return a
-}
-
-func (a *App) setHighlightMode(mode int) {
-	a.mode = mode
-
-	switch a.mode {
-	case HighlightModeChar:
-		a.status.SetText("Highlight: [::u]CHAR[::-] - Press D to switch")
-	case HighlightModeWord:
-		a.status.SetText("Highlight: [::u]WORD[::-] - Press D to switch")
-	case HighlightModeLine:
-		a.status.SetText("Highlight: [::u]LINE[::-] - Press D to switch")
-	default:
-		a.status.SetText("Highlight: [::u]OFF[::-]  - Press D to switch")
-	}
 }
 
 func (a *App) Start(args []string) {
@@ -119,13 +105,51 @@ func (a *App) Start(args []string) {
 	a.ui.Run()
 }
 
-func (a *App) highlight(s1, s2 string) string {
-	if a.mode == HighlightModeOff || s2 == "" {
+func (a *App) showMessage(message string) {
+	a.footer.SetText(message)
+	a.display.AddItem(a.footer, 1, 0, false)
+}
+
+func (a *App) hideMessage() {
+	a.display.RemoveItem(a.footer)
+}
+
+func (a *App) highlightMode() string {
+	switch a.cfg.HighlightMode {
+	case HighlightModeOff:
+		return "NONE"
+	case HighlightModeChar:
+		return "CHAR"
+	case HighlightModeWord:
+		return "WORD"
+	case HighlightModeLine:
+		return "LINE"
+	}
+	return ""
+}
+
+func (a *App) setHighlightMode(mode int) {
+	a.cfg.HighlightMode = mode
+	a.status.SetText(fmt.Sprintf("Highlight: [::u]%s[::-], press [d[] to change", a.highlightMode()))
+}
+
+func (a *App) setSuspendMode(mode bool) {
+	a.cfg.SuspendMode = mode
+	if a.cfg.SuspendMode {
+		a.showMessage("Command execution is paused, press [p] to resume")
+	} else {
+		a.hideMessage()
+		a.datetime.SetText(time.Now().Format(time.ANSIC))
+	}
+}
+
+func (a *App) highlightContent(s1, s2 string) string {
+	if a.cfg.HighlightMode == HighlightModeOff || s2 == "" {
 		return s1
 	}
 
 	var split bufio.SplitFunc
-	switch a.mode {
+	switch a.cfg.HighlightMode {
 	case HighlightModeChar:
 		split = bufio.ScanRunes
 	case HighlightModeWord:
@@ -146,7 +170,7 @@ func (a *App) highlight(s1, s2 string) string {
 		if t2.Scan() && token == t2.Text() {
 			fmt.Fprintf(&buf, "%s", token)
 		} else {
-			fmt.Fprintf(&buf, "[%s]%s[-:-:-]", a.cfg.Style, token)
+			fmt.Fprintf(&buf, "[%s]%s[-:-:-]", a.cfg.ColorStyle, token)
 		}
 	}
 
@@ -169,8 +193,8 @@ func (a *App) exec(cmdArgs []string) int {
 	lastContent := a.content.GetText(true)
 	currContent := buf.String()
 
-	a.content.SetText(a.highlight(currContent, lastContent))
 	a.datetime.SetText(time.Now().Format(time.ANSIC))
+	a.content.SetText(a.highlightContent(currContent, lastContent))
 
 	if err != nil {
 		switch e := err.(type) {
@@ -200,19 +224,17 @@ func (a *App) tick(cmdArgs []string) {
 		}
 
 		<-t.C
-		errCode = a.exec(cmdArgs)
+		if !a.cfg.SuspendMode {
+			errCode = a.exec(cmdArgs)
+		}
 	}
 
-	footer := tview.NewTextView()
-	footer.SetText("command exit with a non-zero status, press a key to exit")
-	footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	a.showMessage("Command exit with a non-zero status, press a key to exit")
+	a.content.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		a.ui.Stop()
 		os.Exit(errCode)
 		return event
 	})
-
-	a.root.AddItem(footer, 1, 0, false)
-	a.ui.SetFocus(footer)
 }
 
 func scanWords(data []byte, atEOF bool) (int, []byte, error) {
@@ -279,8 +301,8 @@ func main() {
 		cfg.Interval = MinInterval
 	}
 
-	if cfg.Style == "" {
-		cfg.Style = DefaultStyle
+	if cfg.ColorStyle == "" {
+		cfg.ColorStyle = DefaultStyle
 	}
 
 	app := NewApp(cfg)
