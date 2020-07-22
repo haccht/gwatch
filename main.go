@@ -38,6 +38,7 @@ type App struct {
 	ui       *tview.Application
 	root     *tview.Flex
 	title    *tview.TextView
+	status   *tview.TextView
 	datetime *tview.TextView
 	content  *tview.TextView
 }
@@ -58,17 +59,19 @@ func NewApp(cfg config) *App {
 		ui:       tview.NewApplication(),
 		root:     tview.NewFlex(),
 		title:    tview.NewTextView(),
+		status:   tview.NewTextView(),
 		datetime: tview.NewTextView(),
 		content:  tview.NewTextView(),
 	}
 
 	header := tview.NewFlex()
 	header.AddItem(a.title, 0, 1, false)
-	header.AddItem(a.datetime, 35, 0, false)
+	header.AddItem(a.datetime, 25, 0, false)
 
 	a.root.SetDirection(tview.FlexRow)
 	if !a.cfg.NoTitle {
-		a.root.AddItem(header, 2, 0, false)
+		a.root.AddItem(header, 1, 0, false)
+		a.root.AddItem(a.status, 1, 0, false)
 	}
 	a.root.AddItem(a.content, 0, 1, true)
 
@@ -78,6 +81,7 @@ func NewApp(cfg config) *App {
 		switch event.Rune() {
 		case 'd':
 			a.mode = (a.mode + 1) % numHighlightMode
+			a.status.SetText(a.HighlightMode())
 		case 'q':
 			a.ui.Stop()
 			os.Exit(0)
@@ -88,6 +92,10 @@ func NewApp(cfg config) *App {
 	a.datetime.SetDynamicColors(true)
 	a.datetime.SetTextAlign(tview.AlignRight)
 
+	a.status.SetDynamicColors(true)
+	a.status.SetTextAlign(tview.AlignRight)
+	a.status.SetText(a.HighlightMode())
+
 	a.ui.SetRoot(a.root, true)
 	return a
 }
@@ -95,14 +103,14 @@ func NewApp(cfg config) *App {
 func (a *App) HighlightMode() string {
 	switch a.mode {
 	case HighlightModeChar:
-		return "Highlight: [::u]CHAR[::-]"
+		return "Highlight: [::u]CHAR[::-] - Press D to switch"
 	case HighlightModeWord:
-		return "Highlight: [::u]WORD[::-]"
+		return "Highlight: [::u]WORD[::-] - Press D to switch"
 	case HighlightModeLine:
-		return "Highlight: [::u]LINE[::-]"
+		return "Highlight: [::u]LINE[::-] - Press D to switch"
 	}
 
-	return "Highlight: [::u]OFF[::-] "
+	return "Highlight: [::u]OFF[::-]  - Press D to switch"
 }
 
 func (a *App) Start(args []string) {
@@ -134,10 +142,10 @@ func (a *App) highlight(s1, s2 string) string {
 	var buf bytes.Buffer
 	for t1.Scan() {
 		token := t1.Text()
-		if t2.Scan() && token != t2.Text() {
-			fmt.Fprintf(&buf, "[%s]%s[-:-:-]", a.cfg.Style, token)
-		} else {
+		if t2.Scan() && token == t2.Text() {
 			fmt.Fprintf(&buf, "%s", token)
+		} else {
+			fmt.Fprintf(&buf, "[%s]%s[-:-:-]", a.cfg.Style, token)
 		}
 	}
 
@@ -160,11 +168,8 @@ func (a *App) exec(cmdArgs []string) int {
 	lastContent := a.content.GetText(true)
 	currContent := buf.String()
 
-	a.datetime.Clear()
+	a.datetime.SetText(time.Now().Format(time.ANSIC))
 	a.content.Clear()
-
-	fmt.Fprintf(a.datetime, "%s\n", time.Now().Format(time.ANSIC))
-	fmt.Fprintf(a.datetime, "%s - Press D to switch\n", a.HighlightMode())
 	a.content.SetText(a.highlight(currContent, lastContent))
 
 	if err != nil {
