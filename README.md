@@ -25,19 +25,19 @@ Help Options:
 To watch the contents of a directory change, you could use
 
 ```sh
-$ gwatch -- ls -l
+$ gwatch ls -l
 ```
 
 To see the interface counters, you could use
 
 ```sh
-$ gwatch -n 1 -- ip -n link
+$ gwatch -n 1 ip -s link show
 ```
 
 You can apply your own style to highlight the output changes with the color tag
 
 ```sh
-$ gwatch -s red -- ls -l
+$ gwatch -s red ls -l
 ```
 
 The full definition of a color tag is as follows:

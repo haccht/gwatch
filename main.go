@@ -260,7 +260,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	parser := flags.NewParser(&cfg, flags.Default)
+	parser := flags.NewParser(&cfg, flags.Default|flags.IgnoreUnknown|flags.PassAfterNonOption)
 	parser.Usage = "[options] command"
 
 	args, err := parser.Parse()
