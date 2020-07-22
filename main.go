@@ -168,9 +168,8 @@ func (a *App) exec(cmdArgs []string) int {
 	lastContent := a.content.GetText(true)
 	currContent := buf.String()
 
-	a.datetime.SetText(time.Now().Format(time.ANSIC))
-	a.content.Clear()
 	a.content.SetText(a.highlight(currContent, lastContent))
+	a.datetime.SetText(time.Now().Format(time.ANSIC))
 
 	if err != nil {
 		switch e := err.(type) {
