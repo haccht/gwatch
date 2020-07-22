@@ -80,8 +80,7 @@ func NewApp(cfg config) *App {
 	a.content.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'd':
-			a.mode = (a.mode + 1) % numHighlightMode
-			a.status.SetText(a.HighlightMode())
+			a.setHighlightMode((a.mode + 1) % numHighlightMode)
 		case 'q':
 			a.ui.Stop()
 			os.Exit(0)
@@ -94,23 +93,25 @@ func NewApp(cfg config) *App {
 
 	a.status.SetDynamicColors(true)
 	a.status.SetTextAlign(tview.AlignRight)
-	a.status.SetText(a.HighlightMode())
 
+	a.setHighlightMode(a.mode)
 	a.ui.SetRoot(a.root, true)
 	return a
 }
 
-func (a *App) HighlightMode() string {
+func (a *App) setHighlightMode(mode int) {
+	a.mode = mode
+
 	switch a.mode {
 	case HighlightModeChar:
-		return "Highlight: [::u]CHAR[::-] - Press D to switch"
+		a.status.SetText("Highlight: [::u]CHAR[::-] - Press D to switch")
 	case HighlightModeWord:
-		return "Highlight: [::u]WORD[::-] - Press D to switch"
+		a.status.SetText("Highlight: [::u]WORD[::-] - Press D to switch")
 	case HighlightModeLine:
-		return "Highlight: [::u]LINE[::-] - Press D to switch"
+		a.status.SetText("Highlight: [::u]LINE[::-] - Press D to switch")
+	default:
+		a.status.SetText("Highlight: [::u]OFF[::-]  - Press D to switch")
 	}
-
-	return "Highlight: [::u]OFF[::-]  - Press D to switch"
 }
 
 func (a *App) Start(args []string) {
@@ -193,10 +194,9 @@ func (a *App) tick(cmdArgs []string) {
 	a.title.SetText(fmt.Sprintf("Every %.1fs: %s", a.cfg.Interval, strings.Join(cmdArgs, " ")))
 	errCode := a.exec(cmdArgs)
 
-TICK:
 	for {
 		if errCode != 0 && a.cfg.ErrExit {
-			break TICK
+			break
 		}
 
 		<-t.C
