@@ -23,17 +23,17 @@ Help Options:
 
 ## Keybinding
 
-- <kbd>d</kbd> Change highlight mode between [NONE, CHAR, WORD, LINE].
-- <kbd>p</kbd> Pause and resume command execution.
-- <kbd>q</kbd> Quit
-- <kbd>h</kbd>, <kbd>Left</kbd> Move left.
-- <kbd>l</kbd>, <kbd>Right</kbd> Move right.
-- <kbd>j</kbd>, <kbd>Down</kbd> Move down.
-- <kbd>k</kbd>, <kbd>Up</kbd> Move up.
-- <kbd>g</kbd>, <kbd>Home</kbd> Move to the top.
-- <kbd>G</kbd>, <kbd>End</kbd> Move to the bottom.
-- <kbd>Ctrl-f</kbd>, <kbd>PageDown</kbd> Move down by one page.
-- <kbd>Ctrl-b</kbd>, <kbd>PageUp</kbd> Move up by one page.
+- <kbd>d</kbd>:  Change highlight mode between [NONE, CHAR, WORD, LINE].
+- <kbd>p</kbd>:  Pause and resume command execution.
+- <kbd>q</kbd>:  Quit
+- <kbd>h</kbd>, <kbd>Left</kbd>:  Move left.
+- <kbd>l</kbd>, <kbd>Right</kbd>:  Move right.
+- <kbd>j</kbd>, <kbd>Down</kbd>:  Move down.
+- <kbd>k</kbd>, <kbd>Up</kbd>:  Move up.
+- <kbd>g</kbd>, <kbd>Home</kbd>:  Move to the top.
+- <kbd>G</kbd>, <kbd>End</kbd>:  Move to the bottom.
+- <kbd>Ctrl-f</kbd>, <kbd>PageDown</kbd>:  Move down by one page.
+- <kbd>Ctrl-b</kbd>, <kbd>PageUp</kbd>:  Move up by one page.
 
 ## Examples
 
@@ -58,7 +58,7 @@ $ gwatch -s red ls -l
 The full definition of a color tag is as follows:
 
 ```
-[<foreground>:<background>:<flags>]
+<foreground>:<background>:<flags>
 ```
 
 Color tags may contain not just the foreground color but also the background color and additional flags.
