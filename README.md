@@ -3,6 +3,8 @@
 `gwatch` is a tool to execute a program periodically, and show the output changes over time.
 `gwatch` can highlight the differences between successive updates.
 
+![screencast](screen.gif)
+
 ## Usage
 
 ```
