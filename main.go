@@ -88,13 +88,15 @@ func NewApp(cfg config) *App {
 		case 'p':
 			a.setSuspendMode(!a.cfg.SuspendMode)
 		case '?':
-			a.showMessage("[j]Down [k]Up [h]Left [l]Right [g]Top [G]Bottom [d]Highlight [p]Pause [?]Help [q]Quit")
-			a.ui.SetFocus(a.footer)
-			a.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-				a.hideMessage()
-				a.ui.SetFocus(a.content)
-				return event
-			})
+			if a.footer == nil {
+				a.showMessage("[j]Down [k]Up [h]Left [l]Right [g]Top [G]Bottom [d]Highlight [p]Pause [?]Help [q]Quit")
+				a.ui.SetFocus(a.footer)
+				a.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+					a.hideMessage()
+					a.ui.SetFocus(a.content)
+					return event
+				})
+			}
 		case 'q':
 			a.ui.Stop()
 			os.Exit(0)
@@ -120,6 +122,7 @@ func (a *App) showMessage(message string) {
 
 func (a *App) hideMessage() {
 	a.display.RemoveItem(a.footer)
+	a.footer = nil
 }
 
 func (a *App) highlightMode() string {
