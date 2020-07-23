@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Version      = "1.0.0"
+	Version      = "1.0.1"
 	DefaultStyle = "::r"
 	MinInterval  = 0.1
 )
@@ -256,12 +256,12 @@ func scanWords(data []byte, atEOF bool) (int, []byte, error) {
 
 	isDelim := unicode.IsSpace(r)
 	scanNext := func(r rune) bool {
-		return isDelim != unicode.IsSpace(r)
+		return isDelim == unicode.IsSpace(r)
 	}
 
 	for j := width; j < len(data); j += width {
 		r, width = utf8.DecodeRune(data[j:])
-		if scanNext(r) {
+		if !scanNext(r) {
 			return j, data[:j], nil
 		}
 	}
@@ -277,12 +277,12 @@ func scanLines(data []byte, atEOF bool) (int, []byte, error) {
 
 	isDelim := (r == '\n')
 	scanNext := func(r rune) bool {
-		return isDelim != (r == '\n')
+		return isDelim == (r == '\n')
 	}
 
 	for j := width; j < len(data); j += width {
 		r, width = utf8.DecodeRune(data[j:])
-		if scanNext(r) {
+		if !scanNext(r) {
 			return j, data[:j], nil
 		}
 	}
