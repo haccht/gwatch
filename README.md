@@ -25,7 +25,8 @@ Help Options:
 
 - <kbd>d</kbd>:  Change highlight mode between [NONE, CHAR, WORD, LINE].
 - <kbd>p</kbd>:  Pause and resume command execution.
-- <kbd>q</kbd>:  Quit
+- <kbd>?</kbd>:  Show help message.
+- <kbd>q</kbd>:  Quit.
 - <kbd>h</kbd>, <kbd>Left</kbd>:  Move left.
 - <kbd>l</kbd>, <kbd>Right</kbd>:  Move right.
 - <kbd>j</kbd>, <kbd>Down</kbd>:  Move down.

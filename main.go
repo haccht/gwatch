@@ -60,7 +60,6 @@ func NewApp(cfg config) *App {
 		title:    tview.NewTextView(),
 		datetime: tview.NewTextView(),
 		status:   tview.NewTextView(),
-		footer:   tview.NewTextView(),
 		content:  tview.NewTextView(),
 		display:  tview.NewFlex(),
 	}
@@ -88,6 +87,14 @@ func NewApp(cfg config) *App {
 			a.setHighlightMode((a.cfg.HighlightMode + 1) % numHighlightMode)
 		case 'p':
 			a.setSuspendMode(!a.cfg.SuspendMode)
+		case '?':
+			a.showMessage("[j]Down [k]Up [h]Left [l]Right [g]Top [G]Bottom [d]Highlight [p]Pause [?]Help [q]Quit")
+			a.ui.SetFocus(a.footer)
+			a.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				a.hideMessage()
+				a.ui.SetFocus(a.content)
+				return event
+			})
 		case 'q':
 			a.ui.Stop()
 			os.Exit(0)
@@ -106,6 +113,7 @@ func (a *App) Start(args []string) {
 }
 
 func (a *App) showMessage(message string) {
+	a.footer = tview.NewTextView()
 	a.footer.SetText(message)
 	a.display.AddItem(a.footer, 1, 0, false)
 }
@@ -230,7 +238,8 @@ func (a *App) tick(cmdArgs []string) {
 	}
 
 	a.showMessage("Command exit with a non-zero status, press a key to exit")
-	a.content.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	a.ui.SetFocus(a.footer)
+	a.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		a.ui.Stop()
 		os.Exit(errCode)
 		return event
