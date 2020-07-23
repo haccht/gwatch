@@ -68,14 +68,13 @@ func NewApp(cfg config) *App {
 	if !a.cfg.NoTitle {
 		header := tview.NewFlex()
 		header.AddItem(a.title, 0, 1, false)
-		header.AddItem(a.datetime, 35, 0, false)
+		header.AddItem(a.datetime, 24, 0, false)
 
 		a.display.AddItem(header, 1, 0, false)
 		a.display.AddItem(a.status, 1, 0, false)
 	}
 	a.display.AddItem(a.content, 0, 1, true)
 
-	a.datetime.SetTextAlign(tview.AlignRight)
 	a.status.SetTextAlign(tview.AlignRight)
 	a.status.SetDynamicColors(true)
 
@@ -298,7 +297,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	parser := flags.NewParser(&cfg, flags.Default|flags.IgnoreUnknown|flags.PassAfterNonOption)
+	parser := flags.NewParser(&cfg, flags.Default|flags.PassAfterNonOption)
 	parser.Usage = "[options] command"
 
 	args, err := parser.Parse()
