@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Version      = "1.0.1"
+	Version      = "1.0.2"
 	DefaultStyle = "::r"
 	MinInterval  = 0.1
 )
