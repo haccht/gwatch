@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Version      = "1.0.0"
+	Version      = "1.0.1"
 	DefaultStyle = "::r"
 	MinInterval  = 0.1
 )
@@ -33,6 +33,7 @@ const (
 
 type App struct {
 	cfg      config
+	cache    string
 	ui       *tview.Application
 	title    *tview.TextView
 	status   *tview.TextView
@@ -151,37 +152,39 @@ func (a *App) setSuspendMode(mode bool) {
 	}
 }
 
-func (a *App) highlightContent(s1, s2 string) string {
-	if a.cfg.HighlightMode == HighlightModeOff || s2 == "" {
-		return s1
+func (a *App) highlightContent(text string) string {
+	if a.cfg.HighlightMode == HighlightModeOff || a.cache == "" {
+		a.cache = text
+		return tview.Escape(text)
 	}
 
 	var split bufio.SplitFunc
 	switch a.cfg.HighlightMode {
 	case HighlightModeChar:
-		split = bufio.ScanRunes
+		split = scanRunes
 	case HighlightModeWord:
 		split = scanWords
 	case HighlightModeLine:
 		split = scanLines
 	}
 
-	t1 := bufio.NewScanner(strings.NewReader(s1))
+	t1 := bufio.NewScanner(strings.NewReader(text))
 	t1.Split(split)
 
-	t2 := bufio.NewScanner(strings.NewReader(s2))
+	t2 := bufio.NewScanner(strings.NewReader(a.cache))
 	t2.Split(split)
 
 	var buf bytes.Buffer
 	for t1.Scan() {
 		token := t1.Text()
 		if t2.Scan() && token == t2.Text() {
-			fmt.Fprintf(&buf, "%s", token)
+			fmt.Fprintf(&buf, "%s", tview.Escape(token))
 		} else {
-			fmt.Fprintf(&buf, "[%s]%s[-:-:-]", a.cfg.ColorStyle, token)
+			fmt.Fprintf(&buf, "[%s]%s[-:-:-]", a.cfg.ColorStyle, tview.Escape(token))
 		}
 	}
 
+	a.cache = text
 	return buf.String()
 }
 
@@ -198,11 +201,8 @@ func (a *App) exec(cmdArgs []string) int {
 	c.Stderr = &buf
 	err := c.Run()
 
-	lastContent := a.content.GetText(true)
-	currContent := buf.String()
-
 	a.datetime.SetText(time.Now().Format(time.ANSIC))
-	a.content.SetText(a.highlightContent(currContent, lastContent))
+	a.content.SetText(a.highlightContent(buf.String()))
 
 	if err != nil {
 		switch e := err.(type) {
@@ -244,6 +244,15 @@ func (a *App) tick(cmdArgs []string) {
 		os.Exit(errCode)
 		return event
 	})
+}
+
+func scanRunes(data []byte, atEOF bool) (int, []byte, error) {
+	advance, token, err := bufio.ScanRunes(data, atEOF)
+	if string(token) == "]" {
+		return advance, []byte("[]"), err
+	}
+
+	return advance, token, err
 }
 
 func scanWords(data []byte, atEOF bool) (int, []byte, error) {
