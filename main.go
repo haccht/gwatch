@@ -69,14 +69,13 @@ func NewApp(cfg config) *App {
 	if !a.cfg.NoTitle {
 		header := tview.NewFlex()
 		header.AddItem(a.title, 0, 1, false)
-		header.AddItem(a.datetime, 35, 0, false)
+		header.AddItem(a.datetime, 24, 0, false)
 
 		a.display.AddItem(header, 1, 0, false)
 		a.display.AddItem(a.status, 1, 0, false)
 	}
 	a.display.AddItem(a.content, 0, 1, true)
 
-	a.datetime.SetTextAlign(tview.AlignRight)
 	a.status.SetTextAlign(tview.AlignRight)
 	a.status.SetDynamicColors(true)
 
@@ -89,13 +88,15 @@ func NewApp(cfg config) *App {
 		case 'p':
 			a.setSuspendMode(!a.cfg.SuspendMode)
 		case '?':
-			a.showMessage("[j]Down [k]Up [h]Left [l]Right [g]Top [G]Bottom [d]Highlight [p]Pause [?]Help [q]Quit")
-			a.ui.SetFocus(a.footer)
-			a.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-				a.hideMessage()
-				a.ui.SetFocus(a.content)
-				return event
-			})
+			if a.footer == nil {
+				a.showMessage("[j]Down [k]Up [h]Left [l]Right [g]Top [G]Bottom [d]Highlight [p]Pause [?]Help [q]Quit")
+				a.ui.SetFocus(a.footer)
+				a.footer.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+					a.hideMessage()
+					a.ui.SetFocus(a.content)
+					return event
+				})
+			}
 		case 'q':
 			a.ui.Stop()
 			os.Exit(0)
@@ -121,6 +122,7 @@ func (a *App) showMessage(message string) {
 
 func (a *App) hideMessage() {
 	a.display.RemoveItem(a.footer)
+	a.footer = nil
 }
 
 func (a *App) highlightMode() string {
@@ -263,12 +265,12 @@ func scanWords(data []byte, atEOF bool) (int, []byte, error) {
 
 	isDelim := unicode.IsSpace(r)
 	scanNext := func(r rune) bool {
-		return isDelim != unicode.IsSpace(r)
+		return isDelim == unicode.IsSpace(r)
 	}
 
 	for j := width; j < len(data); j += width {
 		r, width = utf8.DecodeRune(data[j:])
-		if scanNext(r) {
+		if !scanNext(r) {
 			return j, data[:j], nil
 		}
 	}
@@ -284,12 +286,12 @@ func scanLines(data []byte, atEOF bool) (int, []byte, error) {
 
 	isDelim := (r == '\n')
 	scanNext := func(r rune) bool {
-		return isDelim != (r == '\n')
+		return isDelim == (r == '\n')
 	}
 
 	for j := width; j < len(data); j += width {
 		r, width = utf8.DecodeRune(data[j:])
-		if scanNext(r) {
+		if !scanNext(r) {
 			return j, data[:j], nil
 		}
 	}
@@ -304,7 +306,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	parser := flags.NewParser(&cfg, flags.Default|flags.IgnoreUnknown|flags.PassAfterNonOption)
+	parser := flags.NewParser(&cfg, flags.Default|flags.PassAfterNonOption)
 	parser.Usage = "[options] command"
 
 	args, err := parser.Parse()
