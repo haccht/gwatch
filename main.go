@@ -32,8 +32,11 @@ const (
 )
 
 type App struct {
-	cfg      config
-	cache    string
+	cfg       config
+	cache     string
+	suspend   bool
+	highlight int
+
 	ui       *tview.Application
 	title    *tview.TextView
 	status   *tview.TextView
@@ -44,14 +47,13 @@ type App struct {
 }
 
 type config struct {
-	ErrExit       bool    `short:"e" long:"errexit"  description:"exit if command has a non-zero exit"`
-	Interval      float64 `short:"n" long:"interval" description:"time in seconds to wait between updates" default:"2.0"`
-	NoTitle       bool    `short:"t" long:"no-title" description:"turn off header"`
-	Exec          bool    `short:"x" long:"exec"     description:"pass command to exec instead of \"sh -c\""`
-	ColorStyle    string  `short:"s" long:"style"    description:"interpret color and style sequences"`
-	Version       func()  `short:"v" long:"version"  description:"output version information and exit"`
-	HighlightMode int     `no-flag:"true"`
-	SuspendMode   bool    `no-flag:"true"`
+	ErrExit       bool    `short:"e" long:"errexit"  description:"Exit if command has a non-zero exit"`
+	Interval      float64 `short:"n" long:"interval" description:"Time in seconds to wait between updates" default:"2.0"`
+	NoTitle       bool    `short:"t" long:"no-title" description:"Turn off header"`
+	Exec          bool    `short:"x" long:"exec"     description:"Pass command to exec instead of \"sh -c\""`
+	HighlightMode string  `short:"m" long:"mode"     description:"Highlight mode" choice:"none" choice:"char" choice:"word" choice:"line" default:"none"`
+	ColorStyle    string  `short:"s" long:"style"    description:"Interpret color and style sequences"`
+	Version       func()  `short:"v" long:"version"  description:"Output version information and exit"`
 }
 
 func NewApp(cfg config) *App {
@@ -84,9 +86,9 @@ func NewApp(cfg config) *App {
 	a.content.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'd':
-			a.setHighlightMode((a.cfg.HighlightMode + 1) % numHighlightMode)
+			a.setHighlightMode((a.highlight + 1) % numHighlightMode)
 		case 'p':
-			a.setSuspendMode(!a.cfg.SuspendMode)
+			a.setSuspendMode(!a.suspend)
 		case '?':
 			if a.footer == nil {
 				a.showMessage("[j]Down [k]Up [h]Left [l]Right [g]Top [G]Bottom [d]Highlight [p]Pause [?]Help [q]Quit")
@@ -104,7 +106,17 @@ func NewApp(cfg config) *App {
 		return event
 	})
 
-	a.setHighlightMode(a.cfg.HighlightMode)
+	switch a.cfg.HighlightMode {
+	case "char":
+		a.setHighlightMode(HighlightModeChar)
+	case "word":
+		a.setHighlightMode(HighlightModeWord)
+	case "line":
+		a.setHighlightMode(HighlightModeLine)
+	default:
+		a.setHighlightMode(HighlightModeOff)
+	}
+
 	a.ui.SetRoot(a.display, true)
 	return a
 }
@@ -125,28 +137,25 @@ func (a *App) hideMessage() {
 	a.footer = nil
 }
 
-func (a *App) highlightMode() string {
-	switch a.cfg.HighlightMode {
-	case HighlightModeOff:
-		return "NONE"
-	case HighlightModeChar:
-		return "CHAR"
-	case HighlightModeWord:
-		return "WORD"
-	case HighlightModeLine:
-		return "LINE"
-	}
-	return ""
-}
-
 func (a *App) setHighlightMode(mode int) {
-	a.cfg.HighlightMode = mode
-	a.status.SetText(fmt.Sprintf("Highlight: [::u]%s[::-], press [d[] to change", a.highlightMode()))
+	a.highlight = mode
+	switch a.highlight {
+	case HighlightModeOff:
+		a.cfg.HighlightMode = "NONE"
+	case HighlightModeChar:
+		a.cfg.HighlightMode = "CHAR"
+	case HighlightModeWord:
+		a.cfg.HighlightMode = "WORD"
+	case HighlightModeLine:
+		a.cfg.HighlightMode = "LINE"
+	}
+
+	a.status.SetText(fmt.Sprintf("Highlight: [::u]%s[::-], press [d[] to change", a.cfg.HighlightMode))
 }
 
 func (a *App) setSuspendMode(mode bool) {
-	a.cfg.SuspendMode = mode
-	if a.cfg.SuspendMode {
+	a.suspend = mode
+	if a.suspend {
 		a.showMessage("Command execution is paused, press [p] to resume")
 	} else {
 		a.hideMessage()
@@ -155,13 +164,13 @@ func (a *App) setSuspendMode(mode bool) {
 }
 
 func (a *App) highlightContent(text string) string {
-	if a.cfg.HighlightMode == HighlightModeOff || a.cache == "" {
+	if a.highlight == HighlightModeOff || a.cache == "" {
 		a.cache = text
 		return tview.Escape(text)
 	}
 
 	var split bufio.SplitFunc
-	switch a.cfg.HighlightMode {
+	switch a.highlight {
 	case HighlightModeChar:
 		split = scanRunes
 	case HighlightModeWord:
@@ -234,7 +243,7 @@ func (a *App) tick(cmdArgs []string) {
 		}
 
 		<-t.C
-		if !a.cfg.SuspendMode {
+		if !a.suspend {
 			errCode = a.exec(cmdArgs)
 		}
 	}
